@@ -1,0 +1,227 @@
+---
+title: 'Market Research: Human Development - France'
+author: "Braeden Kuether"
+date: "8/5/2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+## Information:
+
+Country: France |
+Country Tag: FRA |
+Data: Penn World Table |
+
+## Libraries & Data:
+
+```{r}
+library(tidyverse)
+library(pwt9)
+data("pwt9.0")
+```
+
+## Variable Definitions: 
+
+Y = rgdpna                      (real GDP)
+y = rgdpna/emp                  (real GDP per worker)
+Y_pc = (rgdpna/pop)             (GDP per capita)
+L = emp                         (labor)
+h = hc                          (human capital)
+d = delta
+s = ((rdana - rconna)/rgdpna)   (savings rate)
+k = rkna/emp                    (capital per worker)
+a = (1 - labsh)
+l_p = emp/pop                   (labor participation)
+A = y/(k^a*h^(1-a))
+Z = 1/(1-a)*A
+Z_hat = Z - lag(Z)
+
+## Create Data Frame:
+
+Next, mutate variables listed above using Penn World Table data. Using the data frame, filter for the specific country. In this case, years 1950 & 1951 are excluded due to NAs in data frame. 
+
+```{r}
+df <- pwt9.0 %>%
+  mutate(Y = rgdpna, y = rgdpna/emp, k = rkna/emp, a = (1 - labsh)) %>%   #Question 4
+  mutate(h = hc, d = delta, L = emp, s = (rdana - rconna)/rgdpna) %>%     #Question 4
+  mutate(Y_pc = (rgdpna/pop), l_p = emp/pop, pop_hat = pop - lag(pop))
+
+fra <- df %>%
+  filter(isocode == "FRA") %>%
+  mutate(A = y/(k^a*h^(1-a))) %>%   #Question 5
+  mutate(Z = 1/(1-a)*A) %>%         #Question 5
+  mutate(Z_hat = Z - lag(Z)) %>%
+  mutate(L_hat = L - lag(L)) %>%
+  mutate(mean_Z_hat = 0.01) %>%
+  mutate(y_star = (s/(d + L_hat + mean_Z_hat))^(a/(1-a))*h) %>%
+  mutate(exp1 = (s/(d + L_hat + mean_Z_hat))) %>%
+  mutate(exp2 = (a/(1-a))*h) %>%
+  mutate(y_star2 = (s/(d + L_hat + mean_Z_hat))^((h*a)/(1-a))) %>%
+  filter(year != 1950) %>%
+  filter(year != 1951)
+```
+
+## Graphing GDP Statistics
+
+Taking a look at France's GDP, GDP per capita, and GDP per worker. 
+
+```{r}
+ggplot(fra) + 
+  geom_line(aes(x = year, y = Y_pc), color = "red") +
+  geom_line(aes(x = year, y = y), color = "green") +
+  xlab("Year") +
+  ylab("GDP") +
+  ggtitle("GDP Per Capita (red) & GDP Per Worker (green)")
+
+ggplot(fra) + 
+  geom_line(aes(x = year, y = Y), color = "blue") +
+  xlab("Year") +
+  ylab("GDP") +
+  ggtitle("GDP (blue)")
+
+ggplot(fra) + 
+  geom_line(aes(x = year, y = log(Y)), color = "orange") +
+  xlab("Year") +
+  ylab("GDP") +
+  ggtitle("Log GDP (orange)")
+```
+
+GDP in France has seen relatively consistent growth post 1950s. Log GDP shows that the growth rate in GDP has plateaued to a certain extent. As expected, GDP per worker will have a greater nomial value due to the employed population being smaller. In this case, GDP per worker is growing at a larger rate than GDP per capita.
+
+## Graphing Employment and Population Statistics
+
+Taking a look at employment, population, population growth, and labor force participation rate. 
+
+```{r}
+ggplot(fra) + 
+  geom_line(aes(x = year, y = emp), color = "blue") +
+  geom_line(aes(x = year, y = pop), color = "brown") +
+  xlab("Year") +
+  ylab("People (millions)") +
+  ggtitle("Employment (blue) & Population (brown)")
+
+ggplot(fra) + 
+  #geom_line(aes(x = year, y = l_p * 100), color = "black") +
+  geom_line(aes(x = year, y = pop_hat ), color = "red") +
+  xlab("Year") +
+  ylab("Percent") +
+  ggtitle("Labor Force Participation Rate (BLack) & Population Growth (Red)")
+
+ggplot(fra) + 
+  geom_line(aes(x = year, y = l_p * 100), color = "black") +
+  xlab("Year") +
+  ylab("Percent") +
+  ggtitle("Labor Force Participation Rate (isolated)")
+
+```
+
+Looking at these graphs, it is difficult to pinpoint an exact reason for the decline in labor force participation rate up through the 1990s (although the decline is relatively moderate). After doing some more research, it appears that this trend is likely heavily related to the birth rate in France after World War 2. Although other countries also experienced a "baby boom" after 1945, France was on another level. There was a growing sense that the country was no longer the powerhouse that it used to be, especially considering the way that they had been manhandled during the war. This led to the highest population growth rate in the history of the country. It also created some ripple effects in the late 1960s to early 1970s as those children began to reach working age (this was delayed due to the increase in education). This also coincided with a global oil crisis in 1973 which is reflected heavily in the population growth rate at that time (falling from 0.5% to below 0.25%). Since the late 20th century, France has seen a decline in population growth rate. 
+
+## Steady State Income Per Effective Worker
+
+Formula: y_star2 = (s/(d + L_hat + mean_Z_hat))^((h*a)/(1-a))
+
+```{r}
+ggplot(fra) + 
+  geom_line(aes(x = year, y = y_star2), color = "red") +
+  xlab("Year") +
+  ylab("Income Per Effective Worker") +
+  ggtitle("Steady State Income Per Effective Worker")
+```
+
+Due to missing data and other irregularities, it's difficult to draw a specific conclusion from the "SSIPEW" statistic. 
+
+## Capital Share of Income and Income Inequality Statistics:
+
+```{r}
+ggplot(fra) + 
+  geom_line(aes(x = year, y = s), color = "green") +
+  geom_line(aes(x = year, y = d), color = "orange") +
+  geom_line(aes(x = year, y = a), color = "yellow") +
+  xlab("Year") +
+  ylab("Value") +
+  ggtitle("Savings Rate (green), Depreciation (orange), Capital Share of Income (yellow)")
+
+ggplot(fra) + 
+  geom_line(aes(x = year, y = h), color = "blue") +
+  xlab("Year") +
+  ylab("Value") +
+  ggtitle("Human Capital (blue)")
+
+ggplot(fra) + 
+  geom_line(aes(x = year, y = Z), color = "green") +
+  xlab("Year") +
+  ylab("Value") +
+  ggtitle("Productivity (green)")
+
+ggplot(fra) + 
+  geom_line(aes(x = year, y = y / Y_pc), color = "green") +
+  xlab("Year") +
+  ylab("Value") +
+  ggtitle("GDP Per Worker / GDP Per Capita (green)")
+```
+
+Looking at the graphs, depreciation is predictably flat (and even slightly decreasing). Savings rate was rising up through the post-war expansion period, and saw a decline/flattening as the economy shifted. Capital share of income is increasing with time, showing how the dependence on the labor force erroded extremely quickly following the 1950s. "Productivity" falls quickly as well, although the statistic is not necessarily indicative of true productivity. Looking at the GDP per capita / GDP per worker graph, there is a widening in potential income disparity as laborers are forced out of the market.
+This follows the capital share of income trend showing steep diminishing value of labor during that period of time (although capital in this case does not directly correlate to labor force).
+
+With all of this said, the most important factor in determining steady-state trends for France is public sentiment. France is extremely special in that they are well known for being rebelious and going on strike. One of the most important moments in their history was the labor stikes in 1968. While the public might not have had the exact numbers, there was a strong sense that the laborers were being forced out of the market. Coincidentally, 1968 was the largest difference in GDP per capita and GDP per worker that the country had seen up to that point, fueling much of the countries protests and general distaste for extreme capitalism at the time.
+
+## Total Factor Productivity in France Relative to the USA:
+
+```{r}
+ggplot(fra) + 
+  geom_line(aes(x = year, y = ctfp), color = "purple") +
+  geom_line(aes(x = year, y = Y / 1200000), color = "orange") +
+  xlab("Year") +
+  ylab("Value") +
+  ggtitle("Total Factor Productivity in France Relative to the USA (purple)")
+```
+
+This graph is on par with what the research tells us. In 1950, the average income in France was about 55% that of the average American. With the rapid economic expansion during the 1960s and early 70s, that number reached 80% in 1973. The only points where France surpassed the U.S in TFP was during the early 2000s, around the time of recession. 
+
+## Technology Relative to Economic Efficiency:
+
+The Global Creativity Index is a study that looks to compare countries in terms of their technology and overall "creativity". They rank countries in a "Global Technology Index" based on said countries' R&D investments, researchers, and overall innovation. In this category, the USA ranks third in the world, while France ranks fourteenth. With that in mind, I would assume that France is likely only a year or two behind the United States in terms of actual technology. So, we will calculate France's efficiency relative to the United States making the assumption that France is between 1 and 3 years behind the USA. To be safe, we will also look at that number should France be closer to five years behind in technology. 
+
+** Using data from 2014 (most recent)
+
+```{r}
+
+fra2 <- df %>%
+  filter(isocode == "FRA") %>%
+  filter(year == 2014)
+
+productivity <- fra2$ctfp               #Total Factor Productivity
+
+tech_1yr <- (1.0054)^(-1)               #Technology where G = 1
+tech_2yr <- (1.0054)^(-2)               #Technology where G = 2
+tech_3yr <- (1.0054)^(-3)               #Technology where G = 3
+tech_4yr <- (1.0054)^(-4)               #Technology where G = 4
+tech_5yr <- (1.0054)^(-5)               #Technology where G = 5
+tech_6yr <- (1.0054)^(-6)               #Technology where G = 6
+tech_7yr <- (1.0054)^(-7)               #Technology where G = 7
+tech_8yr <- (1.0054)^(-8)               #Technology where G = 8
+tech_9yr <- (1.0054)^(-9)               #Technology where G = 9
+tech_10yr <- (1.0054)^(-10)             #Technology where G = 10
+
+efficiency_1 <- productivity / tech_1yr
+efficiency_2 <- productivity / tech_2yr
+efficiency_3 <- productivity / tech_3yr
+efficiency_4 <- productivity / tech_4yr
+efficiency_5 <- productivity / tech_5yr
+efficiency_6 <- productivity / tech_6yr
+efficiency_7 <- productivity / tech_7yr
+efficiency_8 <- productivity / tech_8yr
+efficiency_9 <- productivity / tech_9yr
+efficiency_10 <- productivity / tech_10yr
+
+x <- c(1,2,3,4,5,6,7,8,9,10)
+y <- c(efficiency_1, efficiency_2, efficiency_3, efficiency_4, efficiency_5, efficiency_6, efficiency_7, efficiency_8, efficiency_9, efficiency_10)
+plot(x,y, main = "Efficieny at different technology levels 2014")
+
+```
+
+Looking at this graph, should France be 1 year behind in technology, they would have an efficiency approximately equal to 95.5% that of the United States. For comparison, if France were closer to 5 years behind in technology, they would have an approximate efficiency of 98% that of the United States. This trend makes sense because should their technology be worse, they would have to be more efficient to produce the same level of Total Factor Productivity. Overall, the two countries are very close, and the data is close enough to assume that they are within a close range of efficiency. 
+
+Since the two countries are very close in terms of technology and productivity, it's hard to say what creates these small differences in efficiency. The two countries have essentially been tied the past 30 years (on average) in Total Factor Productivity, so efficiency will really be dependent on the year you choose. That said, there are many cultural differences that come into play. I would say that the most impactful is the social perception of entrepreneurship (which is ironic given that it's a french word). Americans are much quicker to go out on a limb and wager their future success on themseleves. In France, more people aspire to find prestigious corporate jobs or follow in their parents' footsteps. In this way, I think that America has a small creative advantage. 

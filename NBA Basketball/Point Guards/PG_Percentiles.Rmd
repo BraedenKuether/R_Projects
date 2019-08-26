@@ -1,0 +1,286 @@
+---
+title: "Point Guard Percentiles"
+author: "Braeden Kuether"
+date: "8/19/2019"
+output: html_document
+---
+
+## Statistical Conditions
+
+Using statistics from Basketball Reference. Player has played over 20 games
+and over 6 minutes per game.
+
+## Loading Packages
+
+```{r load_packages, echo=T, message=FALSE, warning=FALSE, results="hide"}
+lapply(
+  c('heatmaply', # devtools::install_github('talgalili/heatmaply')
+    'mclust', #install.packages('mclust')
+    'dplyr', # devtools::install_github('hadley/dplyr')
+    'plotly', # devtools::install_github('ropensci/plotly')
+    'nbastatR', # devtools::install_github('abresler/nbastatR')
+    'purrr', # devtools::install_github('hadley/purrr')
+    'tidyr' # devtools::install_github('hadley/tidyr')
+  ),
+  library,
+  character.only = T
+)
+
+options(digits = 4)
+
+```
+
+## Using Statistics from Basketball Reference
+
+Start by creating per minute stats. Then, use rank function to create rank vector for each stat. Use rank values to find percentile.
+
+```{r, message=FALSE, warning=FALSE}
+
+stat_2019 <- bref_players_stats(season = "2019", tables = c("advanced", "totals", "per game", "per 36"), include_all_nba = F, only_totals = TRUE, nest_data = FALSE, assign_to_environment = TRUE, widen_data = TRUE, join_data = TRUE, return_message = TRUE) %>%
+   filter(countGames > 20) %>%
+   filter(minutesPerGame > 6) %>%
+   filter(slugPosition == 'PG') %>%
+   mutate(df_size = length(ptsPerGame) - 1) %>%
+   mutate(ptsPerMinute = ptsPerGame / minutesPerGame, fgaPerMinute = fgaPerGame / minutesPerGame) %>%
+   mutate(astPerMinute = astPerGame / minutesPerGame, tovPerMinute = tovPerGame / minutesPerGame) %>%
+   mutate(trbPerMinute = trbPerGame / minutesPerGame, orbPerMinute = orbPerGame / minutesPerGame, drbPerMinute = drbPerGame / minutesPerGame) %>%
+   mutate(blkPerMinute = blkPerGame / minutesPerGame, stlPerMinute = stlPerGame / minutesPerGame, pfPerMinute = pfPerGame / minutesPerGame) %>%
+   mutate(pts_pg_rank = rank(ptsPerGame), pts_pm_rank = rank(ptsPerMinute), fga_pg_rank = rank(fgaPerGame), fga_pm_rank = rank(fgaPerMinute)) %>%
+   mutate(ast_pg_rank = rank(astPerGame), ast_pm_rank = rank(astPerMinute), tov_pg_rank = rank(tovPerGame), tov_pm_rank = rank(tovPerMinute)) %>%
+   mutate(trb_pg_rank = rank(trbPerGame), trb_pm_rank = rank(trbPerMinute), orb_pg_rank = rank(orbPerGame), orb_pm_rank = rank(orbPerMinute)) %>%
+   mutate(drb_pg_rank = rank(drbPerGame), drb_pm_rank = rank(drbPerMinute), blk_pg_rank = rank(blkPerGame), blk_pm_rank = rank(blkPerMinute)) %>%  
+   mutate(stl_pg_rank = rank(stlPerGame), stl_pm_rank = rank(stlPerMinute), pf_pg_rank = rank(pfPerGame), pf_pm_rank = rank(pfPerMinute)) %>%
+   mutate(pctFG_rank = rank(pctFG), pctFG3_rank = rank(pctFG3), pctFG2_rank = rank(pctFG2), pctFT_rank = rank(pctFT)) %>%
+   mutate(pctEFG_rank = rank(pctEFG), pctTS_rank = rank(pctTrueShooting)) %>%
+   mutate(ratioOWS_rank = rank(ratioOWS), ratioOBPM_rank = rank(ratioOBPM), ratioDWS_rank = rank(ratioDWS), ratioDBPM_rank = rank(ratioDBPM)) %>%
+   mutate(ratioWS_rank = rank(ratioWS), ratioWSPer48_rank = rank(ratioWSPer48), ratioBPM_rank = rank(ratioBPM), ratioVORP_rank = rank(ratioVORP), ratioPER_rank = rank(ratioPER)) %>%
+   mutate(ratioOWS_percentile = (100 * (ratioOWS_rank - 0.5) / df_size), ratioDWS_percentile = (100 * (ratioDWS_rank - 0.5) / df_size)) %>% 
+   mutate(ratioWS_percentile = (100 * (ratioWS_rank - 0.5) / df_size), ratioWSPer48_percentile = (100 * (ratioWSPer48_rank - 0.5) / df_size)) %>% 
+   mutate(ratioOBPM_percentile = (100 * (ratioOBPM_rank - 0.5) / df_size), ratioDBPM_percentile = (100 * (ratioDBPM_rank - 0.5) / df_size)) %>% 
+   mutate(ratioBPM_percentile = (100 * (ratioBPM_rank - 0.5) / df_size), ratioVORP_percentile = (100 * (ratioVORP_rank - 0.5) / df_size)) %>%   
+   mutate(ratioPER_percentile = (100 * (ratioPER_rank - 0.5) / df_size)) %>%   
+   mutate(pts_pg_percentile = (100 * (pts_pg_rank - 0.5) / df_size), pts_pm_percentile = (100 * (pts_pm_rank - 0.5) / df_size)) %>% 
+   mutate(fga_pg_percentile = (100 * (fga_pg_rank - 0.5) / df_size), fga_pm_percentile = (100 * (fga_pm_rank - 0.5) / df_size)) %>%
+   mutate(ast_pg_percentile = (100 * (ast_pg_rank - 0.5) / df_size), ast_pm_percentile = (100 * (ast_pm_rank - 0.5) / df_size)) %>%
+   mutate(tov_pg_percentile = (100 * (tov_pg_rank - 0.5) / df_size), tov_pm_percentile = (100 * (tov_pm_rank - 0.5) / df_size)) %>%
+   mutate(tov_ast_rank = rank(astPerMinute/tovPerMinute), tov_ast_percentile = (100 * (tov_ast_rank) - 0.5) / df_size) %>%
+   mutate(trb_pg_percentile = (100 * (trb_pg_rank - 0.5) / df_size), trb_pm_percentile = (100 * (trb_pm_rank - 0.5) / df_size)) %>%
+   mutate(orb_pg_percentile = (100 * (orb_pg_rank - 0.5) / df_size), orb_pm_percentile = (100 * (orb_pm_rank - 0.5) / df_size)) %>%
+   mutate(drb_pg_percentile = (100 * (drb_pg_rank - 0.5) / df_size), drb_pm_percentile = (100 * (drb_pm_rank - 0.5) / df_size)) %>%
+   mutate(blk_pg_percentile = (100 * (blk_pg_rank - 0.5) / df_size), blk_pm_percentile = (100 * (pts_pm_rank - 0.5) / df_size)) %>%
+   mutate(stl_pg_percentile = (100 * (stl_pg_rank - 0.5) / df_size), stl_pm_percentile = (100 * (stl_pm_rank - 0.5) / df_size)) %>%
+   mutate(pf_pg_percentile = (100 * (pf_pg_rank - 0.5) / df_size), pf_pm_percentile = (100 * (pf_pm_rank - 0.5) / df_size)) %>%
+   mutate(pctFG_percentile = (100 * (pctFG_rank - 0.5) / df_size), pctFG3_percentile = (100 * (pctFG3_rank - 0.5) / df_size)) %>%
+   mutate(pctFG2_percentile = (100 * (pctFG2_rank - 0.5) / df_size), pctFT_percentile = (100 * (pctFT_rank - 0.5) / df_size)) %>%
+   mutate(pctEFG_percentile = (100 * (pctEFG_rank - 0.5) / df_size), pctTS_percentile = (100 * (pctTS_rank - 0.5) / df_size)) %>%
+   mutate(pts_percentile = pts_pg_percentile + pts_pm_percentile / 200, ast_percentile =  ast_pg_percentile + ast_pm_percentile / 200) %>%
+   mutate(fga_percentile = fga_pg_percentile + fga_pm_percentile / 200, tov_percentile =  tov_pg_percentile + tov_pm_percentile / 200) %>%
+   mutate(trb_percentile = trb_pg_percentile + trb_pm_percentile / 200, orb_percentile =  orb_pg_percentile + orb_pm_percentile / 200) %>%
+   mutate(drb_percentile = drb_pg_percentile + drb_pm_percentile / 200, blk_percentile =  blk_pg_percentile + blk_pm_percentile / 200) %>%
+   mutate(stl_percentile = stl_pg_percentile + stl_pm_percentile / 200, pf_percentile =  pf_pg_percentile + pf_pm_percentile / 200) %>%
+   mutate(rebound_percentile = (trb_percentile + orb_percentile + drb_percentile) / 3) %>%
+   mutate(total_percentile = (pts_percentile + ast_percentile + fga_percentile - tov_percentile + rebound_percentile + stl_percentile + blk_percentile - pf_percentile) / 5)
+  
+size = length(stat_2019$ptsPerGame) - 1
+```
+
+## Overview
+
+Throughout this section players will be evaluated based on two simple factors: per game prodcution, and per minute production. This takes into account the total volume of their "raw" offensive stats, as well as the volume compared to their time on the court. In doing this, we are looking at players who produce at a high level while on the court, as well as players who can produce at a high volume of minutes. 
+
+The criteria do not necessarily speak to the efficiency of the player. The top 20% will be evaluated in the following criteria. 
+
+## Raw Offensive Stats
+
+Top 20% in points per game and points per minute, combined:
+
+```{r}
+stats_2019 <- stat_2019[order(-stat_2019$pts_percentile),] %>%
+   filter(pts_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$pts_percentile))
+```
+
+
+Top 20% in assists per game and assists per minute, combined:
+
+```{r}
+stats_2019 <- stat_2019[order(-stat_2019$ast_percentile),] %>%
+   filter(ast_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$ast_percentile))
+```
+
+Top 20% in rebounds per game and rebounds per minute, combined (including offensive and defensive):
+
+```{r}
+stats_2019 <- stat_2019[order(-stat_2019$trb_percentile),] %>%
+   filter(trb_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$trb_percentile))
+
+stats_2019 <- stat_2019[order(-stat_2019$orb_percentile),] %>%
+   filter(orb_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$orb_percentile))
+
+stats_2019 <- stat_2019[order(-stat_2019$drb_percentile),] %>%
+   filter(drb_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$drb_percentile))
+```
+
+Bottom 20% in turnovers per minute and top 20% in ast/tov per minute percentile ratio:
+
+```{r}
+stats_2019 <- stat_2019[order(-stat_2019$tov_pm_percentile),] %>%
+   filter(tov_pm_percentile < 20) 
+
+print(c(stats_2019$namePlayer, stats_2019$tov_pm_percentile))
+
+stats_2019 <- stat_2019[order(-stat_2019$tov_ast_percentile),] %>%
+   filter(tov_ast_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$tov_ast_percentile))
+```
+
+## Offensive Efficiency & Advanced Stats
+
+Top 20% in field goal percent, 2-point percentage, 3-point percentage, and free throw percentage:
+
+```{r}
+stats_2019 <- stat_2019[order(-stat_2019$pctFG_percentile),] %>%
+   filter(pctFG_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$pctFG_percentile))
+
+stats_2019 <- stat_2019[order(-stat_2019$pctFG2_percentile),] %>%
+   filter(pctFG2_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$pctFG2_percentile))
+
+stats_2019 <- stat_2019[order(-stat_2019$pctFG3_percentile),] %>%
+   filter(pctFG3_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$pctFG3_percentile))
+
+stats_2019 <- stat_2019[order(-stat_2019$pctFT_percentile),] %>%
+   filter(pctFT_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$pctFT_percentile))
+```
+
+Top 20% in effective field goal percentage and true shooting percentage:
+
+```{r}
+stats_2019 <- stat_2019[order(-stat_2019$pctEFG_percentile),] %>%
+   filter(pctEFG_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$pctEFG_percentile))
+
+stats_2019 <- stat_2019[order(-stat_2019$pctTS_percentile),] %>%
+   filter(pctTS_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$pctTS_percentile))
+```
+
+Top 20% in offensive box plus-minus and offensive win shares:
+
+```{r}
+stats_2019 <- stat_2019[order(-stat_2019$ratioOBPM_percentile),] %>%
+   filter(ratioOBPM_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$ratioOBPM_percentile))
+
+stats_2019 <- stat_2019[order(-stat_2019$ratioOWS_percentile),] %>%
+   filter(ratioOWS_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$ratioOWS_percentile))
+```
+
+## Raw Defensive Stats
+
+Due to the low number of "per-game" stats in these sections, the percentiles range will be widened. 
+
+Top 24% in blocks per game and blocks per minute, combined:
+
+```{r}
+stats_2019 <- stat_2019[order(-stat_2019$blk_percentile),] %>%
+   filter(blk_percentile > 76) 
+
+print(c(stats_2019$namePlayer, stats_2019$blk_percentile))
+```
+
+Top 20% in steals per game and steals per minute, combined:
+
+```{r}
+stats_2019 <- stat_2019[order(-stat_2019$stl_percentile),] %>%
+   filter(stl_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$stl_percentile))
+```
+
+Bottom 20% in fouls per minute, and fouls per game and fouls per minute, combined:
+
+```{r}
+stats_2019 <- stat_2019[order(-stat_2019$pf_pm_percentile),] %>%
+   filter(pf_pm_percentile < 20) 
+
+print(c(stats_2019$namePlayer, stats_2019$pf_pm_percentile))
+
+stats_2019 <- stat_2019[order(-stat_2019$pf_percentile),] %>%
+   filter(pf_percentile < 20) 
+
+print(c(stats_2019$namePlayer, stats_2019$pf_percentile))
+```
+
+## Defensive Advance Stats
+
+Top 20% in defensive box plus-minus and defensive win shares:
+
+```{r}
+stats_2019 <- stat_2019[order(-stat_2019$ratioDBPM_percentile),] %>%
+   filter(ratioDBPM_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$ratioDBPM_percentile))
+
+stats_2019 <- stat_2019[order(-stat_2019$ratioDWS_percentile),] %>%
+   filter(ratioDWS_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$ratioDWS_percentile))
+```
+
+## Total Advance Stats
+
+Top 20% in box plus-minus, win shares, and win shares per 48 minutes:
+
+```{r}
+stats_2019 <- stat_2019[order(-stat_2019$ratioBPM_percentile),] %>%
+   filter(ratioBPM_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$ratioBPM_percentile))
+
+stats_2019 <- stat_2019[order(-stat_2019$ratioWS_percentile),] %>%
+   filter(ratioWS_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$ratioWS_percentile))
+
+stats_2019 <- stat_2019[order(-stat_2019$ratioWSPer48_percentile),] %>%
+   filter(ratioWSPer48_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$ratioWSPer48_percentile))
+```
+
+Top 20% in value over replacement player, and player efficiency rating:
+
+```{r}
+stats_2019 <- stat_2019[order(-stat_2019$ratioVORP_percentile),] %>%
+   filter(ratioVORP_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$ratioVORP_percentile))
+
+stats_2019 <- stat_2019[order(-stat_2019$ratioPER_percentile),] %>%
+   filter(ratioPER_percentile > 80) 
+
+print(c(stats_2019$namePlayer, stats_2019$ratioPER_percentile))
+```

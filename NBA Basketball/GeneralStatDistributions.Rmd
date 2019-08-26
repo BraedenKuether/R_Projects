@@ -1,0 +1,381 @@
+---
+title: 'Stat Distributions '
+author: "Braeden Kuether"
+date: "7/23/2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+## Statistical Conditions
+
+Using statistics from Basketball Reference. Player has played over 20 games
+and over 6 minutes per game.
+
+## Loading Packages
+
+```{r load_packages, echo=T, message=FALSE, warning=FALSE, results="hide"}
+lapply(
+  c('heatmaply', # devtools::install_github('talgalili/heatmaply')
+    'mclust', #install.packages('mclust')
+    'dplyr', # devtools::install_github('hadley/dplyr')
+    'plotly', # devtools::install_github('ropensci/plotly')
+    'nbastatR', # devtools::install_github('abresler/nbastatR')
+    'purrr', # devtools::install_github('hadley/purrr')
+    'tidyr' # devtools::install_github('hadley/tidyr')
+  ),
+  library,
+  character.only = T
+)
+
+options(digits = 4)
+
+```
+
+## Using statistics from Basketball Reference
+
+```{r, message=FALSE, warning=FALSE, include=FALSE}
+
+stat_2019 <- bref_players_stats(season = "2019", tables = c("advanced", "totals", "per game", "per 36"), include_all_nba = F, only_totals = TRUE, nest_data = FALSE, assign_to_environment = TRUE, widen_data = TRUE, join_data = TRUE, return_message = TRUE) %>%
+   filter(countGames > 20) %>%
+   filter(minutesPerGame > 6) %>%
+   mutate(df_size = length(ptsPerGame) - 1) %>%
+   mutate(ptsPerMinute = ptsPerGame / minutesPerGame, fgaPerMinute = fgaPerGame / minutesPerGame) %>%
+   mutate(astPerMinute = astPerGame / minutesPerGame, tovPerMinute = tovPerGame / minutesPerGame) %>%
+   mutate(trbPerMinute = trbPerGame / minutesPerGame, orbPerMinute = orbPerGame / minutesPerGame, drbPerMinute = drbPerGame / minutesPerGame) %>%
+   mutate(blkPerMinute = blkPerGame / minutesPerGame, stlPerMinute = stlPerGame / minutesPerGame, pfPerMinute = pfPerGame / minutesPerGame)
+  
+size = length(stat_2019$ptsPerGame) - 1
+```
+
+## Points Per Game Distribution
+
+```{r}
+stats_2019 <- stat_2019[order(stat_2019$ptsPerGame),]
+
+#Mean
+mean(stats_2019$ptsPerGame)
+#Standard Deviation
+sd(stats_2019$ptsPerGame)
+#Spread
+quantile(stats_2019$ptsPerGame)
+
+x <- seq(0, size, 1)
+y <- dnorm(stats_2019$ptsPerGame, mean(stats_2019$ptsPerGame), sd(stats_2019$ptsPerGame))
+
+#Graph
+ggplot(stats_2019) + 
+  geom_line(aes(x = x, y = ptsPerGame), color = "red") +
+  xlab("Player") +
+  ylab("Points Per Game") +
+  ggtitle("Visualizing Points Per Game Distribution")
+```
+
+## Points Per Minute Distribution
+
+```{r}
+stats_2019 <- stat_2019[order(stat_2019$ptsPerMinute),]
+
+#Mean
+mean(stats_2019$ptsPerMinute)
+#Standard Deviation
+sd(stats_2019$ptsPerMinute)
+#Spread
+quantile(stats_2019$ptsPerMinute)
+
+x <- seq(0, size, 1)
+y <- dnorm(stats_2019$ptsPerMinute, mean(stats_2019$ptsPerMinute), sd(stats_2019$ptsPerMinute))
+
+#Graph
+ggplot(stats_2019) + 
+  geom_line(aes(x = x, y = ptsPerMinute), color = "red") +
+  xlab("Player") +
+  ylab("Points Per Minute") +
+  ggtitle("Visualizing Points Per Minute Distribution")
+```
+
+## Assits Per Game Distribution
+
+```{r}
+stats_2019 <- stat_2019[order(stat_2019$astPerGame),]
+
+#Mean
+mean(stats_2019$astPerGame)
+#Standard Deviation
+sd(stats_2019$astPerGame)
+#Spread
+quantile(stats_2019$astPerGame)
+
+x <- seq(0, size, 1)
+y <- dnorm(stats_2019$astPerGame, mean(stats_2019$astPerGame), sd(stats_2019$astPerGame))
+
+#Graph
+ggplot(stats_2019) + 
+  geom_line(aes(x = x, y = astPerGame), color = "red") +
+  xlab("Player") +
+  ylab("Assists Per Game") +
+  ggtitle("Visualizing Assists Per Game Distribution")
+```
+
+## Assists Per Minute Distribution
+
+```{r}
+stats_2019 <- stat_2019[order(stat_2019$astPerMinute),]
+
+#Mean
+mean(stats_2019$astPerMinute)
+#Standard Deviation
+sd(stats_2019$astPerMinute)
+#Spread
+quantile(stats_2019$astPerMinute)
+
+x <- seq(0, size, 1)
+y <- dnorm(stats_2019$astPerMinute, mean(stats_2019$astPerMinute), sd(stats_2019$astPerMinute))
+
+#Graph
+ggplot(stats_2019) + 
+  geom_line(aes(x = x, y = astPerMinute), color = "red") +
+  xlab("Player") +
+  ylab("Assists Per Minute") +
+  ggtitle("Visualizing Assists Per Minute Distribution")
+```
+
+## Total Rebounds Per Game Distribution
+
+```{r}
+stats_2019 <- stat_2019[order(stat_2019$trbPerGame),]
+
+#Mean
+mean(stats_2019$trbPerGame)
+#Standard Deviation
+sd(stats_2019$trbPerGame)
+#Spread
+quantile(stats_2019$trbPerGame)
+
+x <- seq(0, size, 1)
+y <- dnorm(stats_2019$trbPerGame, mean(stats_2019$trbPerGame), sd(stats_2019$trbPerGame))
+
+#Graph
+ggplot(stats_2019) + 
+  geom_line(aes(x = x, y = trbPerGame), color = "red") +
+  xlab("Player") +
+  ylab("Total Rebounds Per Game") +
+  ggtitle("Visualizing Total Rebounds Per Game Distribution")
+```
+
+## Total Rebounds Per Minute Distribution
+
+```{r}
+stats_2019 <- stat_2019[order(stat_2019$trbPerMinute),]
+
+#Mean
+mean(stats_2019$trbPerMinute)
+#Standard Deviation
+sd(stats_2019$trbPerMinute)
+#Spread
+quantile(stats_2019$trbPerMinute)
+
+x <- seq(0, size, 1)
+y <- dnorm(stats_2019$trbPerMinute, mean(stats_2019$trbPerMinute), sd(stats_2019$trbPerMinute))
+
+#Graph
+ggplot(stats_2019) + 
+  geom_line(aes(x = x, y = trbPerMinute), color = "red") +
+  xlab("Player") +
+  ylab("Rebounds Per Minute") +
+  ggtitle("Visualizing Total Rebounds Per Minute Distribution")
+
+```
+
+## Offensive Rebounds Per Game Distribution
+
+```{r}
+stats_2019 <- stat_2019[order(stat_2019$orbPerGame),]
+
+#Mean
+mean(stats_2019$orbPerGame)
+#Standard Deviation
+sd(stats_2019$orbPerGame)
+#Spread
+quantile(stats_2019$orbPerGame)
+
+x <- seq(0, size, 1)
+y <- dnorm(stats_2019$orbPerGame, mean(stats_2019$orbPerGame), sd(stats_2019$orbPerGame))
+
+#Graph
+ggplot(stats_2019) + 
+  geom_line(aes(x = x, y = orbPerGame), color = "red") +
+  xlab("Player") +
+  ylab("Offensive Rebounds Per Game") +
+  ggtitle("Visualizing Offensive Rebounds Per Game Distribution")
+```
+
+## Offensive Rebounds Per Minute Distribution
+
+```{r}
+stats_2019 <- stat_2019[order(stat_2019$orbPerMinute),]
+
+#Mean
+mean(stats_2019$orbPerMinute)
+#Standard Deviation
+sd(stats_2019$orbPerMinute)
+#Spread
+quantile(stats_2019$orbPerMinute)
+
+x <- seq(0, size, 1)
+y <- dnorm(stats_2019$orbPerMinute, mean(stats_2019$orbPerMinute), sd(stats_2019$orbPerMinute))
+
+#Graph
+ggplot(stats_2019) + 
+  geom_line(aes(x = x, y = orbPerMinute), color = "red") +
+  xlab("Player") +
+  ylab("Offensive Rebounds Per Minute") +
+  ggtitle("Visualizing Offensive Rebounds Per Minute Distribution")
+
+```
+
+## Defensive Rebounds Per Game Distribution
+
+```{r}
+stats_2019 <- stat_2019[order(stat_2019$drbPerGame),]
+
+#Mean
+mean(stats_2019$drbPerGame)
+#Standard Deviation
+sd(stats_2019$drbPerGame)
+#Spread
+quantile(stats_2019$drbPerGame)
+
+x <- seq(0, size, 1)
+y <- dnorm(stats_2019$drbPerGame, mean(stats_2019$drbPerGame), sd(stats_2019$drbPerGame))
+
+#Graph
+ggplot(stats_2019) + 
+  geom_line(aes(x = x, y = drbPerGame), color = "red") +
+  xlab("Player") +
+  ylab("Defensive Rebounds Per Game") +
+  ggtitle("Visualizing Defensive Rebounds Per Game Distribution")
+```
+
+## Defensive Rebounds Per Minute Distribution
+
+```{r}
+stats_2019 <- stat_2019[order(stat_2019$drbPerMinute),]
+
+#Mean
+mean(stats_2019$drbPerMinute)
+#Standard Deviation
+sd(stats_2019$drbPerMinute)
+#Spread
+quantile(stats_2019$drbPerMinute)
+
+x <- seq(0, size, 1)
+y <- dnorm(stats_2019$drbPerMinute, mean(stats_2019$drbPerMinute), sd(stats_2019$drbPerMinute))
+
+#Graph
+ggplot(stats_2019) + 
+  geom_line(aes(x = x, y = drbPerMinute), color = "red") +
+  xlab("Player") +
+  ylab("Defensive Rebounds Per Minute") +
+  ggtitle("Visualizing Defensive Rebounds Per Minute Distribution")
+
+```
+
+## Steals Per Game Distribution
+
+```{r}
+stats_2019 <- stat_2019[order(stat_2019$stlPerGame),]
+
+#Mean
+mean(stats_2019$stlPerGame)
+#Standard Deviation
+sd(stats_2019$stlPerGame)
+#Spread
+quantile(stats_2019$stlPerGame)
+
+x <- seq(0, size, 1)
+y <- dnorm(stats_2019$stlPerGame, mean(stats_2019$stlPerGame), sd(stats_2019$stlPerGame))
+
+#Graph
+ggplot(stats_2019) + 
+  geom_line(aes(x = x, y = stlPerGame), color = "red") +
+  xlab("Player") +
+  ylab("Steals Per Game") +
+  ggtitle("Visualizing Steals Per Game Distribution")
+```
+
+## Steals Per Minute Distribution
+
+```{r}
+stats_2019 <- stat_2019[order(stat_2019$stlPerMinute),]
+
+#Mean
+mean(stats_2019$stlPerMinute)
+#Standard Deviation
+sd(stats_2019$stlPerMinute)
+#Spread
+quantile(stats_2019$stlPerMinute)
+
+x <- seq(0, size, 1)
+y <- dnorm(stats_2019$stlPerMinute, mean(stats_2019$stlPerMinute), sd(stats_2019$stlPerMinute))
+
+#Graph
+ggplot(stats_2019) + 
+  geom_line(aes(x = x, y = stlPerMinute), color = "red") +
+  xlab("Player") +
+  ylab("Steals Per Minute") +
+  ggtitle("Visualizing Steals Per Minute Distribution")
+
+```
+
+## Blocks Per Game Distribution
+
+```{r}
+stats_2019 <- stat_2019[order(stat_2019$blkPerGame),]
+
+#Mean
+mean(stats_2019$blkPerGame)
+#Standard Deviation
+sd(stats_2019$blkPerGame)
+#Spread
+quantile(stats_2019$blkPerGame)
+
+x <- seq(0, size, 1)
+y <- dnorm(stats_2019$blkPerGame, mean(stats_2019$blkPerGame), sd(stats_2019$blkPerGame))
+
+#Graph
+ggplot(stats_2019) + 
+  geom_line(aes(x = x, y = blkPerGame), color = "red") +
+  xlab("Player") +
+  ylab("Blocks Per Game") +
+  ggtitle("Visualizing Blocks Per Game Distribution")
+```
+
+## Blocks Per Minute Distribution
+
+```{r}
+stats_2019 <- stat_2019[order(stat_2019$blkPerMinute),]
+
+#Mean
+mean(stats_2019$blkPerMinute)
+#Standard Deviation
+sd(stats_2019$blkPerMinute)
+#Spread
+quantile(stats_2019$blkPerMinute)
+
+x <- seq(0, size, 1)
+y <- dnorm(stats_2019$blkPerMinute, mean(stats_2019$blkPerMinute), sd(stats_2019$blkPerMinute))
+
+#Graph
+ggplot(stats_2019) + 
+  geom_line(aes(x = x, y = blkPerMinute), color = "red") +
+  xlab("Player") +
+  ylab("Steals Per Minute") +
+  ggtitle("Visualizing Blocks Per Minute Distribution")
+
+```
+
+
+
+
+
